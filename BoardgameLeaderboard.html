@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Board Game Club Leaderboard</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: black;
+            color: white;
+            text-align: center;
+            position: relative;
+        }
+        .board-game-images {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+        .board-game-images img {
+            position: absolute;
+            width: 100px;
+            height: auto;
+            opacity: 0.7;
+        }
+        .leaderboard {
+            max-width: 600px;
+            margin: auto;
+            background: rgba(51, 51, 51, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+            animation: fadeIn 1s ease-in-out;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 10px;
+            border-bottom: 1px solid #555;
+            transition: background 0.3s ease-in-out;
+        }
+        tr:hover {
+            background: #444;
+        }
+        button {
+            margin-top: 10px;
+            padding: 10px;
+            background: #0a74da;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            transition: background 0.3s ease-in-out;
+        }
+        button:hover {
+            background: #0858a3;
+        }
+        input {
+            padding: 8px;
+            margin: 5px;
+            border-radius: 5px;
+            border: none;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .new-entry {
+            animation: highlight 1s ease-in-out;
+        }
+        @keyframes highlight {
+            from { background: #0a74da; color: white; }
+            to { background: transparent; color: inherit; }
+        }
+    </style>
+</head>
+<body>
+    <div class="board-game-images" id="board-game-images"></div>
+    <h1>Board Game Club Leaderboard</h1>
+    <div class="leaderboard">
+        <input type="text" id="name" placeholder="Player Name">
+        <input type="number" id="score" placeholder="Score">
+        <input type="text" id="game" placeholder="Game Name">
+        <button onclick="addPlayer()">Add Player</button>
+    </div>
+    <div id="leaderboards-container"></div>
+    <script>
+        let players = JSON.parse(localStorage.getItem('players')) || {};
+
+        function savePlayers() {
+            localStorage.setItem('players', JSON.stringify(players));
+        }
+
+        function addPlayer() {
+            const name = document.getElementById('name').value;
+            const score = parseInt(document.getElementById('score').value);
+            const game = document.getElementById('game').value;
+            if (name && !isNaN(score) && game) {
+                if (!players[game]) {
+                    players[game] = [];
+                }
+                players[game].push({ name, score });
+                savePlayers();
+                updateLeaderboards();
+                document.getElementById('name').value = '';
+                document.getElementById('score').value = '';
+                document.getElementById('game').value = '';
+            }
+        }
+
+        function deletePlayer(game, index) {
+            players[game].splice(index, 1);
+            if (players[game].length === 0) {
+                delete players[game];
+            }
+            savePlayers();
+            updateLeaderboards();
+        }
+
+        function adjustScore(game, index, amount) {
+            players[game][index].score += amount;
+            savePlayers();
+            updateLeaderboards();
+        }
+
+        function updateLeaderboards() {
+            const container = document.getElementById('leaderboards-container');
+            container.innerHTML = '';
+            for (let game in players) {
+                players[game].sort((a, b) => b.score - a.score);
+                let leaderboardDiv = document.createElement('div');
+                leaderboardDiv.classList.add('leaderboard');
+                leaderboardDiv.innerHTML = `<h2>${game}</h2>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Score</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="leaderboard-body-${game}">
+                        </tbody>
+                    </table>`;
+                container.appendChild(leaderboardDiv);
+                const leaderboardBody = document.getElementById(`leaderboard-body-${game}`);
+                players[game].forEach((player, index) => {
+                    let row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${index + 1}</td>
+                        <td>${player.name}</td>
+                        <td>${player.score}</td>
+                        <td>
+                            <button onclick="adjustScore('${game}', ${index}, 1)">+1</button>
+                            <button onclick="adjustScore('${game}', ${index}, -1)">-1</button>
+                            <button onclick="deletePlayer('${game}', ${index})">Delete</button>
+                        </td>
+                    `;
+                    row.classList.add('new-entry');
+                    leaderboardBody.appendChild(row);
+                    setTimeout(() => row.classList.remove('new-entry'), 1000);
+                });
+            }
+        }
+
+        function addBoardGameImages() {
+            const container = document.getElementById('board-game-images');
+            const images = ['chess', 'monopoly', 'catan', 'risk', 'scrabble'];
+            images.forEach((game, index) => {
+                let img = document.createElement('img');
+                img.src = `https://source.unsplash.com/100x100/?${game}`;
+                img.style.top = `${Math.random() * 90}vh`;
+                img.style.left = `${Math.random() * 90}vw`;
+                container.appendChild(img);
+            });
+        }
+
+        window.onload = () => {
+            updateLeaderboards();
+            addBoardGameImages();
+        };
+    </script>
+</body>
+</html>
